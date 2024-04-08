@@ -1,3 +1,4 @@
+import os
 from contextlib import nullcontext
 import pandas as pd
 import numpy as np
@@ -13,27 +14,17 @@ from tqdm import tqdm
 # The Tag Popularity is calculated for every tag (1-2-3-4-5) as 
 # #number of resources tagged with that tag/ maximum numbero of tag used for a single resource.
 
-# Function that load the dataset
-def loadData ():
-    #MATRIX R: rating
-    data = pd.read_csv('../ml-100k/u.data', sep='\\t', engine='python', names=['user id', 'movie id', 'rating', 'timestamp'])
+def create_matrix_ones(movies, user_activity, user_sign):
+    j=0
 
+    for movie in movies:
+        rating = user_activity.loc[user_activity['movie_title'] == movie]['rating']
+        if not rating.empty:
+            rate = rating.values[0]
+            user_sign.iat[rate-1, j] = 1
+        j+=1
 
-    #MATRIX GENERAL: item and topic
-    items = pd.read_csv('../ml-100k/u.item', sep="|", encoding='latin-1', header=None)
-    items.columns = ['movie id', 'movie_title' ,'release date','video release date', 'IMDb URL', 'unknown', 'Action', 
-                    'Adventure', 'Animation', 'Children\'s', 'Comedy', 'Crime', 'Documentary', 'Drama', 'Fantasy', 'Film-Noir', 
-                    'Horror', 'Musical', 'Mystery', 'Romance', 'Sci-Fi', 'Thriller', 'War', 'Western']
-
-    items.drop(columns = ['release date', 'video release date', 'IMDb URL'], axis=1)
-
-    #MATRIX F+R
-    data_users = pd.merge(data[['user id', 'movie id','rating' ]], items, on='movie id')
-    #data_users.to_csv('ml-100k/test.csv', index=False)
-
-    #LIST OF GENRES
-
-    return data_users, items
+    return user_sign
 
 def calc_film_attractivity (matrix):
     topic_attract = []
@@ -79,23 +70,40 @@ def calc_user_signature (matrix, tag_popularity):
         j+=1
     return user_signature
 
-##### MAIN TO SAVE THE USER SIGNATURE FOR ALL USERS ####
-data_users, items = loadData()
 
-users = pd.read_csv('../ml-100k/u.user', sep="|", encoding='latin-1', header=None)
-users.columns = ['user id', 'age', 'gender', 'occupation', 'zip code']
+for i in range(10):
+    data_path = '../../data/training_data/' + 'training' + str(i) + '.pkl'
+    data_users = pd.read(data_path, sep='\\t', engine='python', names=['user id', 'movie id', 'rating', 'timestamp'])
+    users = pd.read_csv('../../data/training_data/u.user', sep="|", encoding='latin-1', header=None)
+    users.columns = ['user id', 'age', 'gender', 'occupation', 'zip code']
 
-for i in tqdm(users.index):
-    topic_attract = 0
-    film_pop = 0
-    user_id = (users.iloc[i])['user id']
+    for i in tqdm(users.index):
+        topic_attract = 0
+        film_pop = 0
+        user_id = (users.iloc[i])['user id']
 
-    filename = 'userSign' + str(user_id) + '.pkl'
-    activity_user = pd.read_pickle('./matrices_new/' + filename)  
-    activity_user = activity_user.loc[:,~activity_user.columns.duplicated()]
-    #film_attract = calc_film_attractivity(activity_user)
-    tag_pop = calc_tag_popularity(activity_user)
-    user_signature = calc_user_signature(activity_user, tag_pop)
-    filename_save = 'f_user_sign' + str(user_id) + '.pkl'
-    print ('USER: ', user_id, " - FILE: ", filename_save)
-    user_signature.to_pickle('./users_signature_new/' + filename_save)
+        items = pd.read_csv('../../data/item_data/items.pkl', sep="|", encoding='latin-1', header=None)
+        items.columns = ['movie id', 'movie_title', 'release date', 'video release date', 'IMDb URL', 'unknown',
+                         'Action',
+                         'Adventure', 'Animation', 'Children\'s', 'Comedy', 'Crime', 'Documentary', 'Drama', 'Fantasy',
+                         'Film-Noir',
+                         'Horror', 'Musical', 'Mystery', 'Romance', 'Sci-Fi', 'Thriller', 'War', 'Western']
+
+        items.drop(columns=['release date', 'video release date', 'IMDb URL'], axis=1)
+        movies = items['movie_title'].values
+        user_signature = pd.DataFrame(0, columns=movies, index=[1, 2, 3, 4, 5])
+        user_id = (users.iloc[i])['user id']
+        user_activity = data_users.loc[data_users['user id'] == user_id]
+        user_activity = user_activity.reset_index()
+        user_signature = create_matrix_ones(movies, user_activity, user_signature)
+
+        activity_user = activity_user.loc[:,~activity_user.columns.duplicated()]
+        tag_pop = calc_tag_popularity(activity_user)
+        user_signature = calc_user_signature(activity_user, tag_pop)
+        filename_save = 'f_user_sign' + str(user_id) + '.pkl'
+        print ('USER: ', user_id, " - FILE: ", filename_save)
+        path = '../../data/user_signatures/fold' + str(i) + '/' + 'users_signature_new/' + filename_save
+
+        if not os.path.exists(path):
+            os.mkdir(path)
+        user_signature.to_pickle('../../data/user_signatures/fold' + str(i) + '/' + 'users_signature_new/' + filename_save)
