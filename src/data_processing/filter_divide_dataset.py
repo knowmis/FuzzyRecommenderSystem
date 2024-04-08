@@ -1,9 +1,10 @@
 
 import pandas as pd
 import sys
+import os
 
-filename = sys.argv[1]
-path = '../ml-100k/' + sys.argv[1]
+
+path = '../../ml-100k/u.data'
 num_users = 497
 i = 0
 j = 0
@@ -16,7 +17,7 @@ us_list = []
 data = pd.read_csv(path, sep='\\t', engine='python', names=['user id', 'movie id', 'rating', 'timestamp'])
 
 #MATRIX F: item and topic
-items = pd.read_csv('../ml-100k/u.item', sep="|", encoding='latin-1', header=None)
+items = pd.read_csv('../../ml-100k/u.item', sep="|", encoding='latin-1', header=None)
 items.columns = ['movie id', 'movie title' ,'release date','video release date', 'IMDb URL', 'unknown', 'Action', 
                 'Adventure', 'Animation', 'Children\'s', 'Comedy', 'Crime', 'Documentary', 'Drama', 'Fantasy', 'Film-Noir', 
                 'Horror', 'Musical', 'Mystery', 'Romance', 'Sci-Fi', 'Thriller', 'War', 'Western']
@@ -29,7 +30,7 @@ items.drop('IMDb URL', axis=1, inplace=True)
 data_users = pd.merge(data[['user id', 'movie id','rating' ]], items, on='movie id')
 
 #MATRIX OF USERS
-users = pd.read_csv('../ml-100k/u.user', sep="|", encoding='latin-1', header=None)
+users = pd.read_csv('../../ml-100k/u.user', sep="|", encoding='latin-1', header=None)
 users.columns = ['user id', 'age', 'gender', 'occupation', 'zip code']
 
 #Extraction of top-n users, i.e. the users with the highest number of ratings
@@ -85,10 +86,10 @@ for i in range(10):
     #SAVING TO FILE PKL TRAIN AND TEST FOR EVERY FOLD
     training_set = training_set.reset_index(drop=True)
     test_set = test_set.reset_index(drop=True)
-    training_set.to_pickle ('../Fuzzy_Method/' + 'training' + str(i) + '.pkl')
-    test_set.to_pickle ('../Make_Prediction/test/' + 'test' + str(i) + '.pkl')
+    training_set.to_pickle ('../../data/training_data/' + 'training' + str(i) + '.pkl')
+    test_set.to_pickle ('../../data/test_data/' + 'test' + str(i) + '.pkl')
     print ("######### TRAINING SET\n", training_set)
     print ("########## TEST SET\n", test_set)
 
 #SAVING THE TOP-N USERS
-users.to_pickle('users.pkl')
+users.to_pickle('../../data/user_data/users.pkl')
